@@ -18,14 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import javax.sql.DataSource;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 
 @ExtendWith(SpringExtension.class)
@@ -42,12 +36,12 @@ class UserControllerUnitTest {
     @Test
     @DisplayName("Test that GET  /create   works correctly")
     public void testThatGetCreateWorksProper() throws Exception {
-
         mockMvc.perform(MockMvcRequestBuilders.get("/users/create"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
                 .andExpect(MockMvcResultMatchers.view().name("create-user"))
                 .andExpect(MockMvcResultMatchers.model().attributeExists("user"));
+        verifyNoInteractions(userService);
     }
 
     @Test
@@ -61,44 +55,107 @@ class UserControllerUnitTest {
         mockUser.setRole(roleService.readById(2));
         Role role = new Role();
         role.setName("Role");
-        Mockito.when(roleService.readById(anyLong())).thenReturn(role);
-        Mockito.when(userService.create(any(User.class))).thenReturn(mockUser);
-        mockMvc.perform(MockMvcRequestBuilders.post("/users/create"))
+        when(roleService.readById(anyLong())).thenReturn(role);
+        when(userService.create(any(User.class))).thenReturn(mockUser);
+        mockMvc.perform(MockMvcRequestBuilders.post("/users/create")
+                        .param("firstName","Firstname" )
+                        .param("lastName", "Lastname")
+                        .param("email", "valid@cv.edu.ua")
+                        .param("password", "qwQW12")
+                )
                 .andExpect(MockMvcResultMatchers.status().is3xxRedirection())
                 .andExpect(MockMvcResultMatchers.view().name("redirect:/todos/all/users/" + mockUser.getId()));
+        verify(userService, times(1)).create(mockUser);
     }
 
     @Test
     @DisplayName("Test that POST  /create  works correctly with invalid user")
     public void testThatPostCreateWorksProperWithInvalidUser() throws Exception {
-        User mockUser = new User();
-        mockUser.setEmail("valid@cv.edu.ua");
-        mockUser.setFirstName("FirstnameInvalid");
-        mockUser.setLastName("Lastname");
-        mockUser.setPassword("qwQW12");
-        mockUser.setRole(roleService.readById(2));
-        Role role = new Role();
-        role.setName("Role");
-        Mockito.when(roleService.readById(anyLong())).thenReturn(role);
-        Mockito.when(userService.create(any(User.class))).thenReturn(mockUser);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/users/create"))
+        mockMvc.perform(MockMvcRequestBuilders.post("/users/create")
+                        .param("firstName","InvalidFirstname" )
+                        .param("lastName", "Lastname")
+                        .param("email", "valid@cv.edu.ua")
+                        .param("password", "qwQW12") )
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.view().name("create-user"));
+        verifyNoInteractions(userService);
     }
 
     @Test
     @DisplayName("Test that GET  /all  works correctly")
     public void testThatGetAllWorksProperWithInvalidUser() throws Exception {
-        List<User> expected = new ArrayList<>();
-        expected.add(new User());
-        expected.add(new User());
-        Mockito.when(userService.getAll()).thenReturn(expected);
-
         mockMvc.perform(MockMvcRequestBuilders.get("/users/all"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.view().name("users-list"))
                 .andExpect(MockMvcResultMatchers.model().attributeExists("users"));
+        verify(userService, times(1)).getAll();
+    }
+
+    @Test
+    @DisplayName("Test that GET  /{id}/read   works correctly")
+    public void testThatGetReadWorksProper() throws Exception {
+        User mockUser  = new User();
+        mockUser.setEmail("valid@cv.edu.ua");
+        mockUser.setFirstName("Firstname");
+        mockUser.setLastName("Lastname");
+        mockUser.setPassword("qwQW12");
+        Role mockRole = new Role();
+        mockRole.setName("Role");
+        when(roleService.create(mockRole)).thenReturn(mockRole);
+        roleService.create(mockRole);
+        when(roleService.readById(anyLong())).thenReturn(mockRole);
+        mockUser.setRole(roleService.readById(1));
+        when(userService.readById(anyLong())).thenReturn(mockUser);
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/1/read"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(MockMvcResultMatchers.view().name("user-info"))
+                .andExpect(MockMvcResultMatchers.model().attributeExists("user"));
+        verify(userService, times(1)).readById(1);
+    }
+
+    @Test
+    @DisplayName("Test that GET  /{id}/delete   works correctly")
+    public void testThatGetDeleteWorksProper() throws Exception {
+        User mockUser  = new User();
+        mockUser.setEmail("valid@cv.edu.ua");
+        mockUser.setFirstName("Firstname");
+        mockUser.setLastName("Lastname");
+        mockUser.setPassword("qwQW12");
+        Role mockRole = new Role();
+        mockRole.setName("Role");
+        when(roleService.create(mockRole)).thenReturn(mockRole);
+        roleService.create(mockRole);
+        when(roleService.readById(anyLong())).thenReturn(mockRole);
+        mockUser.setRole(roleService.readById(1));
+        when(userService.readById(anyLong())).thenReturn(mockUser);
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/1/delete"))
+                .andExpect(MockMvcResultMatchers.status().is3xxRedirection())
+                .andExpect(MockMvcResultMatchers.view().name("redirect:/users/all"));
+        verify(userService, times(1)).delete(1);
+    }
+
+    @Test
+    @DisplayName("Test that POST /{id}/update   works correctly")
+    public void testThatGetUpdateWorksProper() throws Exception {
+        User mockUser  = new User();
+        mockUser.setEmail("valid@cv.edu.ua");
+        mockUser.setFirstName("Firstname");
+        mockUser.setLastName("Lastname");
+        mockUser.setPassword("qwQW12");
+        Role mockRole = new Role();
+        mockRole.setName("Role");
+        when(roleService.create(mockRole)).thenReturn(mockRole);
+        roleService.create(mockRole);
+        when(roleService.readById(anyLong())).thenReturn(mockRole);
+        mockUser.setRole(roleService.readById(1));
+        when(userService.readById(anyLong())).thenReturn(mockUser);
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/1/update"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.model().attributeExists("user"))
+                .andExpect(MockMvcResultMatchers.model().attributeExists("roles"))
+                .andExpect(MockMvcResultMatchers.view().name("update-user"));
+        verify(userService, times(1)).readById(1);
     }
 
 }

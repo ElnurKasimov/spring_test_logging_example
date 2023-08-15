@@ -1,23 +1,21 @@
 package com.softserve.itacademy.controller;
 
-import com.softserve.itacademy.model.Role;
 import com.softserve.itacademy.model.User;
 import com.softserve.itacademy.service.RoleService;
 import com.softserve.itacademy.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -31,30 +29,36 @@ class UserControllerIntegrationTest {
     private RoleService roleService;
 
     @Test
-    @DisplayName("Test that GET  /create   create  user in db")
+    @DisplayName("Test that POST /create   create  user in db")
     @Transactional
     public void testThatGetCreateCreateUserInDb() throws Exception {
-        User expected  = new User();
-        expected.setEmail("valid@cv.edu.ua");
-        expected.setFirstName("Firstname");
-        expected.setLastName("Lastname");
-        expected.setPassword("qwQW12");
-        expected.setRole(roleService.readById(2));
-        userService.create(expected);
+        mockMvc.perform(MockMvcRequestBuilders.post("/users/create")
+                        .param("firstName","Firstname" )
+                        .param("lastName", "Lastname")
+                        .param("email", "valid@cv.edu.ua")
+                        .param("password", "qwQW12")
+                )
+                .andExpect(MockMvcResultMatchers.status().is3xxRedirection())
+                .andExpect(MockMvcResultMatchers.view().name("redirect:/todos/all/users/1" ));
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/users/create"))
-            .andExpect(MockMvcResultMatchers.status().isOk())
-            .andExpect(MockMvcResultMatchers.content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-            .andExpect(MockMvcResultMatchers.view().name("create-user"))
-            .andExpect(MockMvcResultMatchers.model().attributeExists("user"))
-            .andExpect(MockMvcResultMatchers.model().attribute("user", expected));
+        User expected  = userService.readById(1);
+
+        assertEquals("valid@cv.edu.ua", expected.getEmail());
+        }
+
+    @Test
+    @DisplayName("Test that GET  /all  gets  all users from DB")
+
+    public void testThatGetAllGetsUsersFRomDB() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/all"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.view().name("users-list"))
+                .andExpect(MockMvcResultMatchers.model().attributeExists("users"));
+        List<User> expected = userService.getAll();
+        assertNotNull(expected);
     }
 
 
+    }
 
 
-
-
-
-
-}
