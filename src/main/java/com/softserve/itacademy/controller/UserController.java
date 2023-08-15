@@ -9,6 +9,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 @Controller
 @RequestMapping("/users")
 public class UserController {
@@ -55,7 +57,7 @@ public class UserController {
 
 
     @PostMapping("/{id}/update")
-    public String update(@PathVariable long id, Model model, @Validated @ModelAttribute("user") User user, @RequestParam("roleId") long roleId, BindingResult result) {
+    public String update(@PathVariable long id, Model model, @Valid @ModelAttribute("user") User user, @RequestParam("roleId") long roleId, BindingResult result) {
         User oldUser = userService.readById(id);
         if (result.hasErrors()) {
             user.setRole(oldUser.getRole());

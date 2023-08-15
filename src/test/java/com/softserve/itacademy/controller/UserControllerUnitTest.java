@@ -136,7 +136,7 @@ class UserControllerUnitTest {
     }
 
     @Test
-    @DisplayName("Test that POST /{id}/update   works correctly")
+    @DisplayName("Test that GET /{id}/update   works correctly")
     public void testThatGetUpdateWorksProper() throws Exception {
         User mockUser  = new User();
         mockUser.setEmail("valid@cv.edu.ua");
@@ -156,6 +156,66 @@ class UserControllerUnitTest {
                 .andExpect(MockMvcResultMatchers.model().attributeExists("roles"))
                 .andExpect(MockMvcResultMatchers.view().name("update-user"));
         verify(userService, times(1)).readById(1);
+        verify(roleService, times(1)).getAll();
     }
 
+    @Test
+    @DisplayName("Test that POST /{id}/update works correctly with invalid user")
+    public void testThatGetUpdateWorksProperWithInvalidUser() throws Exception {
+        User mockOLdUser  = new User();
+        mockOLdUser.setId(100L);
+        mockOLdUser.setEmail("valid@cv.edu.ua");
+        mockOLdUser.setFirstName("Firstname");
+        mockOLdUser.setLastName("Lastname");
+        mockOLdUser.setPassword("qwQW12");
+        Role mockRole = new Role();
+        mockRole.setName("Role");
+        when(roleService.create(mockRole)).thenReturn(mockRole);
+        roleService.create(mockRole);
+        when(roleService.readById(anyLong())).thenReturn(mockRole);
+        mockOLdUser.setRole(mockRole);
+        when(userService.readById(anyLong())).thenReturn(mockOLdUser);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/{id}/update", mockOLdUser.getId())
+                .param("firstName","New firstname" )
+                .param("lastName", "Lastname")
+                .param("email", "valid@cv.edu.ua")
+                .param("password", "qwQW12")
+                .param("roleId", Long.toString(1L)))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.model().attributeExists("roles"))
+                .andExpect(MockMvcResultMatchers.view().name("update-user"));
+        verify(userService, times(1)).readById(100);
+        verify(roleService, times(1)).getAll();
+    }
+
+    @Test
+    @DisplayName("Test that POST /{id}/update works correctly with valid user")
+    public void testThatGetUpdateWorksProperWithValidUser() throws Exception {
+        User mockOLdUser  = new User();
+        mockOLdUser.setId(100L);
+        mockOLdUser.setEmail("valid@cv.edu.ua");
+        mockOLdUser.setFirstName("Firstname");
+        mockOLdUser.setLastName("Lastname");
+        mockOLdUser.setPassword("qwQW12");
+        Role mockRole = new Role();
+        mockRole.setName("USER");
+        when(roleService.create(mockRole)).thenReturn(mockRole);
+
+        when(roleService.readById(anyLong())).thenReturn(mockRole);
+
+        mockOLdUser.setRole(mockRole);
+        when(userService.readById(anyLong())).thenReturn(mockOLdUser);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/{id}/update", mockOLdUser.getId())
+                        .param("firstName","Newname" )
+                        .param("lastName", "Lastname")
+                        .param("email", "valid@cv.edu.ua")
+                        .param("password", "qwQW12")
+                        .param("roleId", Long.toString(1L)))
+                .andExpect(MockMvcResultMatchers.status().is3xxRedirection())
+                .andExpect(MockMvcResultMatchers.view().name("redirect:/users/" + mockOLdUser.getId() + "/read"));
+        verify(userService, times(1)).readById(100);
+        verify(roleService, times(1)).readById(anyLong());
+    }
 }
